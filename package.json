@@ -15,7 +15,8 @@
   "dependencies": {
     "@vueuse/core": "catalog:frontend",
     "vue": "catalog:frontend",
-    "vue-router": "catalog:frontend"
+    "vue-router": "catalog:frontend",
+    "xlsx": "catalog:default"
   },
   "devDependencies": {
     "@antfu/eslint-config": "catalog:dev",
