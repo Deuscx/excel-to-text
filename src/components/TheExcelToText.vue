@@ -6,6 +6,83 @@ const convertedText = ref('')
 const isProcessing = ref(false)
 const fileName = ref('')
 const errorMessage = ref('')
+const wordFrequency = ref<Array<{ word: string, count: number }>>([])
+
+// 常见连接词列表（英文停用词）
+const stopWords = new Set([
+  'a',
+  'an',
+  'the',
+  'and',
+  'or',
+  'but',
+  'if',
+  'because',
+  'as',
+  'what',
+  'when',
+  'where',
+  'how',
+  'who',
+  'which',
+  'this',
+  'that',
+  'these',
+  'those',
+  'then',
+  'just',
+  'so',
+  'than',
+  'such',
+  'both',
+  'through',
+  'about',
+  'for',
+  'is',
+  'of',
+  'to',
+  'on',
+  'at',
+  'in',
+  'by',
+  'with',
+  'from',
+  'up',
+  'into',
+  'over',
+  'after',
+  'under',
+  'again',
+  'further',
+  'once',
+  'here',
+  'there',
+  'all',
+  'any',
+  'both',
+  'each',
+  'few',
+  'more',
+  'most',
+  'other',
+  'some',
+  'such',
+  'no',
+  'nor',
+  'not',
+  'only',
+  'own',
+  'same',
+  'so',
+  'than',
+  'too',
+  'very',
+  'can',
+  'will',
+  'just',
+  'should',
+  'now',
+])
 
 // 处理文件上传
 async function handleFileUpload(event: Event) {
@@ -16,11 +93,15 @@ async function handleFileUpload(event: Event) {
   const file = target.files[0]
   fileName.value = file.name
   errorMessage.value = ''
+  wordFrequency.value = []
 
   try {
     isProcessing.value = true
     const text = await convertExcelToText(file)
     convertedText.value = text
+
+    // 进行词频统计
+    wordFrequency.value = calculateWordFrequency(text)
 
     // 重置文件输入，以便可以再次选择同一个文件
     if (fileInput.value) {
@@ -30,10 +111,37 @@ async function handleFileUpload(event: Event) {
   catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '处理文件时出错'
     convertedText.value = ''
+    wordFrequency.value = []
   }
   finally {
     isProcessing.value = false
   }
+}
+
+// 计算词频统计
+function calculateWordFrequency(text: string): Array<{ word: string, count: number }> {
+  // 转换文本为小写并移除非字母字符
+  const cleanText = text.toLowerCase().replace(/[^a-z\s]/g, '')
+
+  // 分割文本为单词数组
+  const words = cleanText.split(/\s+/)
+
+  // 统计词频
+  const frequencyMap = new Map<string, number>()
+
+  for (const word of words) {
+    // 排除空字符串和停用词
+    if (word && word.length > 1 && !stopWords.has(word)) {
+      frequencyMap.set(word, (frequencyMap.get(word) || 0) + 1)
+    }
+  }
+
+  // 转换为排序后的数组
+  const frequencyArray = Array.from(frequencyMap.entries())
+    .map(([word, count]) => ({ word, count }))
+    .sort((a, b) => b.count - a.count)
+
+  return frequencyArray
 }
 
 // 转换Excel为文本
@@ -131,6 +239,7 @@ function clearResult() {
   convertedText.value = ''
   fileName.value = ''
   errorMessage.value = ''
+  wordFrequency.value = []
 }
 </script>
 
@@ -216,6 +325,25 @@ function clearResult() {
         <pre class="text-sm p-4 rounded-lg bg-gray-100 max-h-96 overflow-auto dark:bg-gray-800">
           {{ convertedText }}
         </pre>
+      </div>
+
+      <!-- 词频统计区域 -->
+      <div v-if="wordFrequency.length > 0" class="mt-6">
+        <h3 class="text-lg font-semibold mb-3">
+          词频统计
+        </h3>
+        <div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-800">
+          <div class="gap-2 grid grid-cols-1 max-h-64 overflow-auto lg:grid-cols-3 md:grid-cols-2">
+            <div
+              v-for="(item, index) in wordFrequency"
+              :key="index"
+              class="p-2 rounded flex items-center justify-between hover:bg-gray-200 dark:hover:bg-gray-700"
+            >
+              <span class="font-mono">{{ item.word }}</span>
+              <span class="text-gray-600 dark:text-gray-300">{{ item.count }}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
